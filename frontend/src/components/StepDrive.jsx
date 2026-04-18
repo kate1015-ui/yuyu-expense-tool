@@ -87,6 +87,7 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
       <button type="button" className="btn-primary w-full" onClick={onCalculate} disabled={!canCalc}>
         {leg.loading ? "計算中…" : "計算距離"}
       </button>
+      <p className="text-xs text-slate-400 text-center -mt-1">若計算失敗，請重新搜尋地址後再按一次</p>
 
       {leg.error && (
         <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">{leg.error}</div>
