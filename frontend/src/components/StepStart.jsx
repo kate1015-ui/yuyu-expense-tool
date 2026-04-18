@@ -237,21 +237,16 @@ export default function StepStart({ onNext, onSelectMode, onQuickSubmit, initial
         {showPrint && (
           <div className="mt-3 space-y-3">
             <p className="text-xs text-slate-500">選擇姓名後直接開啟 Google Sheet 列印</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(memberSheets).map(name => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setPrintName(n => n === name ? "" : name)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition
-                    ${printName === name
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-blue-400"}`}
-                >
-                  {name}
-                </button>
+            <select
+              value={printName}
+              onChange={e => setPrintName(e.target.value)}
+              className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand"
+            >
+              <option value="">— 選擇姓名 —</option>
+              {MEMBERS.map(name => (
+                <option key={name} value={name}>{name}</option>
               ))}
-            </div>
+            </select>
             {printName && memberSheets[printName] ? (
               <a
                 href={memberSheets[printName]}
@@ -262,8 +257,11 @@ export default function StepStart({ onNext, onSelectMode, onQuickSubmit, initial
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 開啟 {printName} 的 Google Sheet
               </a>
-            ) : printName ? (
-              <p className="text-xs text-red-500">找不到此成員的 Google Sheet，請聯絡管理員</p>
+            ) : printName && !memberSheets[printName] ? (
+              <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                連線中，請稍候…
+              </div>
             ) : null}
           </div>
         )}
