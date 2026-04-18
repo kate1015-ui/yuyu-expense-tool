@@ -126,6 +126,16 @@ export default function App() {
     setStep(1);
   }
 
+  // ── 步驟 3：返回步驟 2（記憶交通資料） ──────────────────
+  function handleBackFromConfirm() {
+    if (transportData) {
+      setInitialLegs(transportData.legs?.length > 0 ? transportData.legs : null);
+      if (transportData.etag_amt !== undefined)
+        setInitialEtag(String(transportData.etag_amt || ""));
+    }
+    setStep(2);
+  }
+
   // ── 步驟 3：確認送出成功 ───────────────────────────────
   function handleConfirmDone(res, payload) {
     setSubmitResult({ ...res, ...payload });
@@ -204,7 +214,7 @@ export default function App() {
           <StepConfirm
             basicData={basicData}
             transportData={transportData}
-            onBack={() => setStep(2)}
+            onBack={handleBackFromConfirm}
             onDone={handleConfirmDone}
           />
         )}
