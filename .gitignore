@@ -6,6 +6,9 @@ service_account.json
 backend/service_account.json
 backend/service_account*.json
 backend/config_resp.json
+railway_env.txt
+vercel_env.txt
+*_env.txt
 
 # --- Python ---
 __pycache__/

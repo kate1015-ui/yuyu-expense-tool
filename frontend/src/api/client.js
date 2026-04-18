@@ -1,6 +1,7 @@
 // API Base URL
 //   - 本地開發：空字串 → 走 Vite proxy 轉到 localhost:5000
-//   - 部署（Vercel）：設定環境變數 VITE_API_BASE=https://your-backend.up.railway.app
+//   - 部署（Vercel）：空字串 → 同 origin，vercel.json rewrites 會把 /api/* 導到 Python serverless
+//   - 若後端另外部署（Render 等）：設定 VITE_API_BASE=https://your-backend.example.com
 const BASE = `${import.meta.env.VITE_API_BASE || ""}/api`;
 
 async function handle(res) {

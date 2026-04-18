@@ -1,0 +1,15 @@
+.env
+.env.*
+backend/service_account*.json
+backend/config_resp.json
+backend/backend.log
+frontend/vite.log
+frontend/node_modules
+frontend/dist
+__pycache__
+*.pyc
+.venv/
+venv/
+.playwright-mcp/
+docs/
+railway_env.txt
