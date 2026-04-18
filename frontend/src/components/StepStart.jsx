@@ -6,7 +6,7 @@ const MEAL_PER_PERSON = 700;
 const TITLES = ["攝影師", "創意總監", "企劃", "業務", "行政"];
 const MEMBERS = ["黃柏堯", "黃聖婷", "黃荷舒", "黃郁清", "許泳玲", "林琮堯", "陳瑋帆", "鄭雅欣"];
 
-function NameChips({ selected, onSelect, multi = false, excludes = [] }) {
+function NameChips({ selected, onSelect, multi = false, excludes = [], noCustom = false }) {
   const [showInput, setShowInput] = useState(false);
   const [customVal, setCustomVal] = useState("");
 
@@ -47,7 +47,7 @@ function NameChips({ selected, onSelect, multi = false, excludes = [] }) {
           </button>
         );
       })}
-      {showInput ? (
+      {!noCustom && (showInput ? (
         <div className="flex gap-1">
           <input className="field py-1 px-3 text-sm w-28" value={customVal}
             onChange={e => setCustomVal(e.target.value)}
@@ -63,7 +63,7 @@ function NameChips({ selected, onSelect, multi = false, excludes = [] }) {
           className="px-3 py-1.5 rounded-full text-sm border border-dashed border-slate-300 text-slate-400 hover:border-brand hover:text-brand transition">
           + 其他
         </button>
-      )}
+      ))}
     </div>
   );
 }
@@ -277,6 +277,7 @@ export default function StepStart({ onNext, onSelectMode, onQuickSubmit, initial
             selected={form.name}
             onSelect={name => setForm(f => ({ ...f, name }))}
             excludes={companionList}
+            noCustom
           />
         </div>
 
