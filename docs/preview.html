@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>嶼嶼行銷・出差報帳工具 — 畫面預覽</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Microsoft JhengHei","PingFang TC",sans-serif; background: #f1f5f9; }
+
+/* header */
+.site-header { background: #2563eb; color: #fff; text-align: center; padding: 18px 20px 14px; }
+.site-header h1 { font-size: 20px; font-weight: 800; }
+.site-header p  { font-size: 13px; opacity: .8; margin-top: 3px; }
+
+/* layout */
+.page { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; padding: 36px 20px; }
+.col  { width: 320px; }
+.col-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-align: center; margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* phone */
+.phone { border: 7px solid #1e293b; border-radius: 34px; box-shadow: 0 16px 48px rgba(0,0,0,.18); overflow: hidden; }
+.notch { background: #1e293b; height: 22px; width: 80px; margin: 0 auto; border-radius: 0 0 12px 12px; }
+.screen { background: #f1f5f9; padding: 0; max-height: 640px; overflow-y: auto; }
+
+/* app header */
+.app-hdr { background: rgba(255,255,255,.92); border-bottom: 1px solid #e2e8f0; padding: 10px 14px 8px; }
+.app-hdr h1 { font-size: 14px; font-weight: 800; color: #1e293b; }
+.app-hdr p  { font-size: 10px; color: #94a3b8; }
+.progress { display: flex; gap: 3px; margin-top: 6px; }
+.progress div { height: 3px; flex: 1; border-radius: 9px; background: #e2e8f0; }
+.progress div.active { background: #2563eb; }
+.step-label { font-size: 10px; color: #94a3b8; margin-top: 3px; }
+
+/* content */
+.content { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.card { background: #fff; border-radius: 16px; border: 1px solid #e2e8f0; padding: 14px; }
+.card h2 { font-size: 14px; font-weight: 700; color: #1e293b; }
+.card .sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+/* mode cards */
+.mode-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.mode-card:hover { border-color: #2563eb; }
+.mode-card .icon { font-size: 32px; }
+.mode-card .label { font-size: 14px; font-weight: 700; color: #1e293b; }
+.mode-card .desc  { font-size: 11px; color: #94a3b8; margin-top: 2px; line-height: 1.5; }
+
+/* name chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1.5px solid #e2e8f0; background: #fff; color: #475569; cursor: pointer; }
+.chip.on { background: #2563eb; color: #fff; border-color: #2563eb; }
+.chip.dashed { border-style: dashed; color: #94a3b8; }
+.selected-hint { font-size: 11px; color: #475569; margin-top: 6px; }
+.selected-hint b { color: #1e293b; }
+
+/* form fields */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.full { grid-column: 1/-1; }
+label.lbl { display: block; font-size: 10px; font-weight: 600; color: #64748b; margin-bottom: 3px; }
+input, select { width: 100%; padding: 9px 11px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 12px; background: #fff; color: #1e293b; }
+input.filled { border-color: #a5b4fc; background: #eef2ff; }
+
+/* buttons */
+.btn-blue  { width: 100%; padding: 12px; border-radius: 12px; border: none; background: #2563eb; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.btn-ghost { width: 100%; padding: 12px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #fff; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+/* people picker */
+.people-row { display: flex; gap: 6px; margin-top: 4px; }
+.ppl-btn { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid #e2e8f0; font-size: 13px; font-weight: 700; background: #fff; color: #475569; display: flex; align-items: center; justify-content: center; }
+.ppl-btn.on { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+/* toggle */
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle { width: 40px; height: 22px; border-radius: 11px; background: #2563eb; position: relative; flex-shrink: 0; }
+.toggle .knob { width: 18px; height: 18px; background: #fff; border-radius: 9px; position: absolute; top: 2px; right: 2px; }
+
+/* result box */
+.result-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 11px 13px; font-size: 12px; }
+.result-box .row { display: flex; justify-content: space-between; padding: 2px 0; }
+.result-box .big { color: #2563eb; font-size: 16px; font-weight: 800; }
+
+/* total card */
+.total-card { background: #1e293b; border-radius: 16px; padding: 14px; color: #fff; }
+.total-card .t-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; color: #94a3b8; }
+.total-card .t-row span:last-child { color: #fff; }
+.total-card .grand { display: flex; justify-content: space-between; font-size: 17px; font-weight: 800; border-top: 1px solid #334155; padding-top: 8px; margin-top: 6px; }
+.total-card .grand span:last-child { color: #4ade80; }
+
+/* success */
+.check-circle { width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+
+/* divider section */
+.section { padding: 36px 20px; }
+.section-title { text-align: center; font-size: 17px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+.section-sub   { text-align: center; font-size: 12px; color: #94a3b8; margin-bottom: 24px; }
+
+/* Excel preview */
+.excel-wrap { max-width: 560px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,.08); }
+.excel-title { background: #166534; color: #fff; text-align: center; padding: 12px; font-size: 15px; font-weight: 700; letter-spacing: 4px; }
+.excel-body  { padding: 16px; font-size: 12px; }
+.excel-body .er { display: flex; border-bottom: 1px solid #f1f5f9; padding: 6px 0; }
+.excel-body .ek { color: #64748b; width: 100px; flex-shrink: 0; }
+.excel-body .ev { color: #1e293b; font-weight: 600; }
+.excel-body .red { color: #dc2626; font-size: 15px; }
+.sig-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+.sig-box { border-top: 1px solid #334155; text-align: center; padding-top: 5px; font-size: 11px; color: #64748b; }
+.note-box { border: 1px dashed #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #94a3b8; margin-top: 10px; }
+
+footer { background: #2563eb; color: #fff; text-align: center; padding: 16px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <h1>嶼嶼行銷・出差報帳工具 — 畫面預覽</h1>
+  <p>4 個步驟完成報帳，自動填入 Excel 一鍵下載</p>
+</div>
+
+<div class="page">
+
+  <!-- Step 0: 選擇交通方式 -->
+  <div class="col">
+    <div class="col-label">① 選擇交通方式</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="app-hdr">
+          <h1>嶼嶼行銷・出差報帳</h1>
+          <p>自動填寫出差旅費報告表</p>
+          <div class="progress"><div class="active"></div><div></div><div></div></div>
+          <div class="step-label">選擇交通</div>
+        </div>
+        <div class="content">
+          <div>
+            <h2 style="font-size:17px;font-weight:800;color:#1e293b;">這次怎麼去的？</h2>
+            <p style="font-size:11px;color:#94a3b8;margin-top:3px;">選擇交通方式，系統自動帶入對應流程</p>
+          </div>
+          <div class="mode-card" style="border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);">
+            <div class="icon">🚇</div>
+            <div>
+              <div class="label">大眾交通工具</div>
+              <div class="desc">捷運、公車、火車、計程車…<br>拍下收據，AI 自動辨識金額</div>
+            </div>
+          </div>
+          <div class="mode-card">
+            <div class="icon">🚗</div>
+            <div>
+              <div class="label">自行開車</div>
+              <div class="desc">填寫起點與終點<br>系統自動計算里程，每公里 8 元</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1a: 大眾交通 上傳收據 -->
+  <div class="col">
+    <div class="col-label">② 大眾交通 — 上傳收據</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="app-hdr">
+          <h1>嶼嶼行銷・出差報帳</h1>
+          <p>自動填寫出差旅費報告表</p>
+          <div class="progress"><div class="active"></div><div class="active"></div><div></div></div>
+          <div class="step-label">交通費資料</div>
+        </div>
+        <div class="content">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;color:#94a3b8;">← 返回</span>
+            <h2 style="font-size:17px;font-weight:800;">上傳收據</h2>
+          </div>
+          <div class="card" style="gap:10px;display:flex;flex-direction:column;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <button class="btn-blue" style="margin:0;font-size:12px;padding:10px;">📷 拍照</button>
+              <button class="btn-ghost" style="font-size:12px;padding:10px;">🖼️ 選檔案</button>
+            </div>
+            <!-- 收據縮圖 -->
+            <div style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;height:120px;display:flex;align-items:center;justify-content:center;font-size:40px;">🧾</div>
+            <!-- AI 結果 -->
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 11px;font-size:11px;color:#1e40af;">
+              ✅ 辨識完成（信心度 92%）<br>
+              <span style="color:#475569;">台灣大車隊・2026-01-06</span>
+            </div>
+            <div>
+              <label class="lbl">確認金額 (NTD) — 可直接修改</label>
+              <input class="filled" value="320" />
+            </div>
+            <button class="btn-blue" style="margin:0;">下一步 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1b: 自行開車 里程計算 -->
+  <div class="col">
+    <div class="col-label">② 自行開車 — 里程計算</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="app-hdr">
+          <h1>嶼嶼行銷・出差報帳</h1>
+          <p>自動填寫出差旅費報告表</p>
+          <div class="progress"><div class="active"></div><div class="active"></div><div></div></div>
+          <div class="step-label">交通費資料</div>
+        </div>
+        <div class="content">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;color:#94a3b8;">← 返回</span>
+            <h2 style="font-size:17px;font-weight:800;">里程計算</h2>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div><label class="lbl">起點</label><input value="公司" /></div>
+            <div><label class="lbl">終點（客戶地點）</label><input value="珮瑜公司 / 桃園市中壢區" /></div>
+            <!-- toggle 來回 -->
+            <div class="toggle-row">
+              <div class="toggle"><div class="knob"></div></div>
+              <span style="font-size:12px;font-weight:600;color:#1e293b;">來回計算（同一天去回）</span>
+            </div>
+            <button class="btn-blue" style="margin:0;">計算里程</button>
+          </div>
+          <!-- 結果 -->
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <div style="color:#16a34a;font-weight:700;font-size:13px;">✅ 計算完成</div>
+            <div class="result-box">
+              <div class="row"><span>單程距離</span><span><b>19.6 公里</b></span></div>
+              <div class="row"><span>預估車程</span><span>約 32 分鐘</span></div>
+              <div class="row"><span>來回油資</span><span class="big">NT$ 314</span></div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:3px;">(每公里 8 元)</div>
+            </div>
+            <button class="btn-blue" style="margin:0;">下一步 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: 確認表單 -->
+  <div class="col">
+    <div class="col-label">③ 確認報帳資料</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="app-hdr">
+          <h1>嶼嶼行銷・出差報帳</h1>
+          <p>自動填寫出差旅費報告表</p>
+          <div class="progress"><div class="active"></div><div class="active"></div><div class="active"></div></div>
+          <div class="step-label">確認 & 下載</div>
+        </div>
+        <div class="content">
+          <!-- 出差人 -->
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <h2>👤 出差人</h2>
+            <div>
+              <label class="lbl">姓名（點選）</label>
+              <div class="chips">
+                <span class="chip">黃柏堯</span>
+                <span class="chip on">黃聖婷</span>
+                <span class="chip">黃荷舒</span>
+                <span class="chip">黃郁清</span>
+                <span class="chip">許泳玲</span>
+                <span class="chip">林琮堯</span>
+                <span class="chip">陳瑋帆</span>
+                <span class="chip">鄭雅欣</span>
+                <span class="chip dashed">+ 其他</span>
+              </div>
+              <div class="selected-hint">已選：<b>黃聖婷</b></div>
+            </div>
+            <div>
+              <label class="lbl">職稱</label>
+              <select style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:12px;">
+                <option>攝影師</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">事由</label>
+              <input style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid #a5b4fc;background:#eef2ff;font-size:12px;" value="拍攝珮瑜" placeholder="拍攝 XXX（客戶名稱）" />
+            </div>
+            <div>
+              <label class="lbl">日期</label>
+              <input type="date" style="width:100%;padding:8px 10px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:12px;" value="2026-01-06" />
+            </div>
+            <div style="font-size:10px;color:#94a3b8;">單位：嶼嶼行銷（固定）</div>
+          </div>
+
+          <!-- 交通費唯讀摘要 -->
+          <div class="card">
+            <h2>🚘 交通費</h2>
+            <div style="background:#f8fafc;border-radius:10px;padding:10px 12px;font-size:11px;margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">交通方式</span><span>自行開車・來回</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">路線</span><span>公司 → 珮瑜公司 (19.6km)</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:#64748b;">交通費合計</span><span style="font-weight:800;color:#2563eb;">NT$ 314</span></div>
+            </div>
+          </div>
+
+          <!-- 同行人 & 代墊 -->
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <h2>👥 同行人</h2>
+            <p style="font-size:10px;color:#94a3b8;margin-top:-6px;">有人一起去就點選，人數自動更新影響膳雜費</p>
+            <div>
+              <label class="lbl">同行人（可多選，點選出差人以外的人）</label>
+              <div class="chips">
+                <span class="chip">黃柏堯</span>
+                <span class="chip on">黃荷舒</span>
+                <span class="chip">黃郁清</span>
+                <span class="chip">許泳玲</span>
+                <span class="chip">林琮堯</span>
+                <span class="chip">陳瑋帆</span>
+                <span class="chip">鄭雅欣</span>
+                <span class="chip dashed">+ 其他</span>
+              </div>
+              <div style="font-size:11px;color:#475569;margin-top:6px;">
+                共 <b>2 人</b>出行・膳雜費 2 × 700 = <b style="color:#1e293b;">NT$ 1,400</b>
+              </div>
+            </div>
+            <!-- 代墊 toggle -->
+            <div class="toggle-row">
+              <div class="toggle"><div class="knob"></div></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:#1e293b;">我幫同行人代墊</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px;">摘要欄自動填入「幫黃荷舒代墊」</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 合計 -->
+          <div class="total-card">
+            <div style="font-size:11px;color:#64748b;margin-bottom:6px;">本次請款金額</div>
+            <div class="t-row"><span>交通費</span><span>NT$ 314</span></div>
+            <div class="t-row"><span>膳雜費</span><span>NT$ 1,400</span></div>
+            <div class="grand"><span>合計</span><span>NT$ 1,714</span></div>
+          </div>
+
+          <button class="btn-blue" style="font-size:14px;padding:14px;">📥 下載報帳 Excel</button>
+          <p style="text-align:center;font-size:10px;color:#94a3b8;">下載後用 Excel 開啟，確認無誤後印出附上實體單據</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: 完成 -->
+  <div class="col">
+    <div class="col-label">④ 下載完成</div>
+    <div class="phone">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="app-hdr">
+          <h1>嶼嶼行銷・出差報帳</h1>
+          <p>自動填寫出差旅費報告表</p>
+        </div>
+        <div class="content" style="align-items:center;text-align:center;padding-top:40px;">
+          <div class="check-circle">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h2 style="font-size:18px;font-weight:800;color:#1e293b;">報帳已送出！</h2>
+          <p style="font-size:12px;color:#94a3b8;margin-top:6px;line-height:1.9;">
+            已新增分頁 <b style="color:#1e293b;">「42彩賢禮」</b><br>
+            到 <b style="color:#1e293b;">黃聖婷</b> 的 Google Sheet
+          </p>
+          <div style="background:#f8fafc;border-radius:12px;padding:8px 20px;margin-top:8px;font-size:13px;">
+            合計 <span style="color:#2563eb;font-weight:800;font-size:16px;">NT$ 1,714</span>
+          </div>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;align-items:center;width:100%;">
+            <button class="btn-blue" style="max-width:240px;width:100%;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              開啟 Google Sheet 列印
+            </button>
+            <button class="btn-ghost" style="max-width:240px;width:100%;font-size:12px;">📥 下載 Excel（備用）</button>
+            <button class="btn-ghost" style="max-width:240px;width:100%;font-size:12px;">繼續新增報帳</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Excel 填好後的樣子 -->
+<div class="section" style="background:#fff;border-top:1px solid #e2e8f0;">
+  <div class="section-title">⑤ 自動填好的 Excel — 出差旅費報告表</div>
+  <div class="section-sub">下載後直接列印，附上實體收據交給會計</div>
+  <div class="excel-wrap">
+    <div class="excel-title">出 差 旅 費 報 告 表</div>
+    <div class="excel-body">
+      <div class="er"><span class="ek">姓名</span><span class="ev">黃聖婷</span></div>
+      <div class="er"><span class="ek">單位</span><span class="ev">嶼嶼行銷</span></div>
+      <div class="er"><span class="ek">職稱</span><span class="ev">攝影師</span></div>
+      <div class="er"><span class="ek">事由</span><span class="ev">拍攝珮瑜</span></div>
+      <div class="er"><span class="ek">期間</span><span class="ev">2026-01-06 至 2026-01-06</span></div>
+      <div style="margin: 10px 0 4px; font-size: 11px; font-weight: 700; color: #64748b;">明細</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:5px 6px;text-align:left;border:1px solid #e2e8f0;">日期</th>
+            <th style="padding:5px 6px;text-align:left;border:1px solid #e2e8f0;">起訖地點</th>
+            <th style="padding:5px 6px;text-align:left;border:1px solid #e2e8f0;">工具</th>
+            <th style="padding:5px 6px;text-align:right;border:1px solid #e2e8f0;">交通費</th>
+            <th style="padding:5px 6px;text-align:right;border:1px solid #e2e8f0;">膳雜費</th>
+            <th style="padding:5px 6px;text-align:left;border:1px solid #e2e8f0;">摘要</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">2026-01-06</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">公司→珮瑜公司<br>(19.6公里)</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">自行開車</td>
+            <td style="padding:5px 6px;text-align:right;border:1px solid #e2e8f0;">156.8</td>
+            <td style="padding:5px 6px;text-align:right;border:1px solid #e2e8f0;font-weight:700;">1,400</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">&amp;荷舒</td>
+          </tr>
+          <tr style="background:#fafafa;">
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">2026-01-06</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">珮瑜公司→公司<br>(20.1公里)</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">自行開車</td>
+            <td style="padding:5px 6px;text-align:right;border:1px solid #e2e8f0;">160.8</td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;"></td>
+            <td style="padding:5px 6px;border:1px solid #e2e8f0;">&amp;荷舒</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:10px;font-size:12px;color:#64748b;">2 人（膳雜費）</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;margin-top:8px;display:flex;justify-content:space-between;font-weight:700;font-size:13px;">
+        <span>新台幣小計</span>
+        <span>交通費 317.6 ＋ 膳雜費 1,400 = <span style="color:#dc2626;font-size:15px;">NT$ 1,717.6</span></span>
+      </div>
+      <div class="note-box">請將實體收據／發票黏貼於本單背面，交會計部門核銷。</div>
+      <div class="sig-row">
+        <div class="sig-box">核准</div>
+        <div class="sig-box">財務會計</div>
+        <div class="sig-box">出差人</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>這只是設計預覽，實際功能需啟動後端 (python app.py) + 前端 (npm run dev)</footer>
+</body>
+</html>

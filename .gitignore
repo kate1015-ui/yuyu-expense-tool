@@ -1,0 +1,44 @@
+# --- 敏感資料（絕對不能 commit）---
+.env
+.env.local
+.env.*.local
+service_account.json
+backend/service_account.json
+backend/service_account*.json
+backend/config_resp.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# --- Node / Vite ---
+node_modules/
+dist/
+.vite/
+*.local
+
+# --- Logs ---
+*.log
+backend.log
+vite.log
+
+# --- OS / IDE ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- 暫存 ---
+.claude/
+.playwright-mcp/
+tmp/
+temp/
