@@ -219,7 +219,7 @@ export default function StepStart({ onNext, onSelectMode, onQuickSubmit, initial
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-slate-800">辛苦了！今天去哪工作呀～</h2>
+        <h2 className="text-xl font-bold text-slate-800">天若有情天亦老，人若沒錢活不了</h2>
         <p className="text-sm text-slate-500 mt-1">（填寫基本資料後下一頁選擇交通方式）</p>
       </div>
 
