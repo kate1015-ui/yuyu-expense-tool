@@ -4,7 +4,7 @@ import { api } from "../api/client";
 
 const MEAL_PER_PERSON = 700;
 const TITLES = ["攝影師", "創意總監", "企劃", "業務", "行政"];
-const MEMBERS = ["黃柏堯", "黃聖婷", "黃荷舒", "黃郁清", "許泳玲", "林琮堯", "陳瑋帆", "鄭雅欣", "測試帳號"];
+const MEMBERS = ["黃柏堯", "黃聖婷", "黃荷舒", "黃郁清", "許泳玲", "林琮堯", "陳瑋帆", "鄭雅欣"];
 
 function NameChips({ selected, onSelect, multi = false, excludes = [] }) {
   const [showInput, setShowInput] = useState(false);

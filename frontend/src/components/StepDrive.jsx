@@ -223,11 +223,18 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
   }
 
   async function calculateLeg(id) {
-    const leg = legs.find(l => l.id === id);
-    if (!leg) return;
-    setLegs(prev => prev.map(l => l.id === id ? { ...l, loading: true, error: "", result: null } : l));
+    // 用 functional updater 讀取最新 state，避免 autocomplete 選址後 stale closure 問題
+    let origin = "";
+    let destination = "";
+    setLegs(prev => {
+      const leg = prev.find(l => l.id === id);
+      origin      = leg?.origin?.trim()      || "";
+      destination = leg?.destination?.trim() || "";
+      return prev.map(l => l.id === id ? { ...l, loading: true, error: "", result: null } : l);
+    });
+    if (!origin || !destination) return;
     try {
-      const res = await api.calculateMileage(leg.origin, leg.destination);
+      const res = await api.calculateMileage(origin, destination);
       setLegs(prev => prev.map(l => l.id === id ? { ...l, loading: false, result: res.mileage } : l));
     } catch (e) {
       setLegs(prev => prev.map(l => l.id === id ? { ...l, loading: false, error: e.message } : l));

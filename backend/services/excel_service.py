@@ -146,11 +146,11 @@ def build_rows_from_form(form: dict) -> list[dict]:
     mode = form.get("transport_mode")
     companions = form.get("companions", "").strip()
 
-    note = ""
+    # 解析同行人名單
+    companion_names = []
     if companions:
-        names = [n.strip() for n in companions.replace("、", ",").split(",") if n.strip()]
-        if names:
-            note = "幫" + "、".join(names) + "代墊"
+        companion_names = [n.strip() for n in companions.replace("、", ",").split(",") if n.strip()]
+    companion_str = "、".join(companion_names)
 
     people = int(form.get("people", 1))
     meal_total = MEAL_PER_PERSON * people
@@ -160,6 +160,8 @@ def build_rows_from_form(form: dict) -> list[dict]:
     first = True
 
     if mode == "drive":
+        # 自行開車：有同行人 → 「與X共乘」
+        note = ("與" + companion_str + "共乘") if companion_names else ""
         parking_total = 0.0
         for leg in legs:
             cost = float(leg.get("cost") or 0)
@@ -205,6 +207,14 @@ def build_rows_from_form(form: dict) -> list[dict]:
             origin = leg.get("origin", "").strip()
             dest = leg.get("destination", "").strip()
             tool = (leg.get("tool") or "大眾交通").strip()
+            # 計程車 → 「與X共乘」；高鐵/台鐵/捷運 → 「幫X代墊」
+            if companion_names:
+                if tool == "計程車":
+                    note = "與" + companion_str + "共乘"
+                else:
+                    note = "幫" + companion_str + "代墊"
+            else:
+                note = ""
             rows.append({
                 "date": d,
                 "route": f"{origin}→{dest}" if origin or dest else "",

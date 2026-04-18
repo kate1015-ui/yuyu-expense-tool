@@ -213,6 +213,8 @@ export default function App() {
         {step === 4 && (
           <SuccessScreen result={submitResult} onReset={reset} />
         )}
+
+        <p className="text-center text-xs text-slate-300 pt-8">Powered by Kate Zhang</p>
       </main>
     </div>
   );
