@@ -5,7 +5,7 @@ import NameChips from "./NameChips";
 import { MEMBERS } from "../constants";
 
 const MEAL_PER_PERSON = 700;
-const TITLES = ["攝影師", "創意總監", "企劃", "業務", "行政"];
+const TITLES = ["攝影師", "資深攝影指導", "創意總監", "企劃", "專案執行", "業務", "行政"];
 
 function TemplateCard({ tpl, onApply, onQuickSubmit, onRemove, disabled }) {
   const legs = tpl.legs || [];
