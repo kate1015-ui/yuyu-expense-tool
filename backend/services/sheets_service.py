@@ -156,11 +156,15 @@ def _fill(ws: gspread.Worksheet, payload: dict, date_str: str):
             t_amt  = float(rd.get("transport_amt") or 0)
             transport_sum += t_amt
 
+            transport = rd.get("transport", "")
+            # 停車費 / ETag 不寫工具欄（欄位有下拉驗證，寫入非選項值會被覆蓋）
+            SKIP_TOOL = {"停車費", "ETag/過路費"}
             updates += [
                 (f"A{r}", _tw_date(rd.get("date") or date_str)),
                 (f"C{r}", (rd.get("route") or "").replace("\n", " ")),
-                (f"D{r}", rd.get("transport", "")),
             ]
+            if transport and transport not in SKIP_TOOL:
+                updates.append((f"D{r}", transport))
             if t_amt:  updates.append((f"E{r}", t_amt))
             note = rd.get("note", "")
             if note:   updates.append((f"I{r}", note))

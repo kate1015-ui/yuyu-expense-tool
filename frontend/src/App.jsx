@@ -62,81 +62,82 @@ function SuccessScreen({ result, onReset }) {
   );
 }
 
-// step: 0=填資料, 1=選交通, 2=路程詳細, 3=確認送出, 4=完成
 const STEP_LABELS = ["填寫資料", "選擇交通", "路程詳細", "確認送出"];
 
 export default function App() {
   const [step, setStep]               = useState(0);
   const [mode, setMode]               = useState(null);
-  const [basicData, setBasicData]     = useState(null);   // 第一頁資料（記憶用）
+  const [basicData, setBasicData]     = useState(null);
   const [transportData, setTransportData] = useState(null);
-  const [initialLegs, setInitialLegs] = useState(null);   // 交通路段草稿（返回時記憶）
+  const [initialLegs, setInitialLegs] = useState(null);
   const [initialEtag, setInitialEtag] = useState("");
+  const [initialCompanions, setInitialCompanions] = useState("");
   const [submitResult, setSubmitResult] = useState(null);
 
   function reset() {
     setStep(0); setMode(null); setBasicData(null);
     setTransportData(null); setInitialLegs(null);
-    setInitialEtag(""); setSubmitResult(null);
+    setInitialEtag(""); setInitialCompanions(""); setSubmitResult(null);
   }
 
-  // ── 步驟 0 → 1：下一步 ───────────────────────────────
+  // ── 步驟 0 → 1 ───────────────────────────────────────────
   function handleNext(formData) {
-    setBasicData(formData);        // 記憶第一頁資料
-    setMode(null);
-    setInitialLegs(null);
-    setInitialEtag("");
+    setBasicData(formData);
+    setMode(null); setInitialLegs(null); setInitialEtag(""); setInitialCompanions("");
     setStep(1);
   }
 
-  // ── 步驟 0：模板「帶入資料」→ 直接到步驟 2 ──────────
-  function handleSelectMode(m, formData, templateLegs, templateEtag) {
+  // ── 步驟 0：模板「帶入資料」→ 直接到步驟 2 ──────────────
+  function handleSelectMode(m, formData, templateLegs, templateEtag, templateCompanions) {
     setMode(m);
     setBasicData(formData);
     setInitialLegs(templateLegs || null);
     setInitialEtag(String(templateEtag || ""));
+    setInitialCompanions(templateCompanions || "");
     setStep(2);
   }
 
-  // ── 步驟 0：模板「⚡ 一鍵報帳」→ 直接完成 ────────────
+  // ── 步驟 0：模板「⚡ 一鍵報帳」→ 直接完成 ────────────────
   function handleQuickSubmit(res, payload) {
     setSubmitResult({ ...res, ...payload });
     setStep(4);
   }
 
-  // ── 步驟 1：選擇交通方式 → 步驟 2 ───────────────────
+  // ── 步驟 1：選擇交通方式 → 步驟 2 ───────────────────────
   function handleModeSelect(m) {
     setMode(m);
-    setInitialLegs(null);
-    setInitialEtag("");
+    setInitialLegs(null); setInitialEtag(""); setInitialCompanions("");
     setStep(2);
   }
 
-  // ── 步驟 2：路程完成 → 步驟 3 ───────────────────────
+  // ── 步驟 2：路程完成 → 步驟 3 ───────────────────────────
   function handleTransportDone(data) {
     setTransportData(data);
     setStep(3);
   }
 
-  // ── 步驟 2：返回（記憶路程草稿） ──────────────────────
-  // StepTransit 傳回 legs，StepDrive 傳回 (legs, etag)
-  function handleTransportBack(legs, etag) {
+  // ── 步驟 2：返回（記憶路程草稿 + 同行人） ────────────────
+  function handleTransportBack(legs, etag, companions) {
     setInitialLegs(legs?.length > 0 ? legs : null);
-    if (etag !== undefined) setInitialEtag(String(etag || ""));
+    if (etag !== undefined)       setInitialEtag(String(etag || ""));
+    if (companions !== undefined) setInitialCompanions(companions || "");
     setStep(1);
   }
 
-  // ── 步驟 3：返回步驟 2（記憶交通資料） ──────────────────
+  // ── 步驟 3：返回步驟 2（記憶交通資料） ───────────────────
   function handleBackFromConfirm() {
     if (transportData) {
-      setInitialLegs(transportData.legs?.length > 0 ? transportData.legs : null);
+      // 濾掉複製代墊段，讓 StepTransit 重新依勾選產生
+      const cleanLegs = (transportData.legs || []).filter(l => !l.isCompanionCopy);
+      setInitialLegs(cleanLegs.length > 0 ? cleanLegs : null);
       if (transportData.etag_amt !== undefined)
         setInitialEtag(String(transportData.etag_amt || ""));
+      setInitialCompanions(transportData.companions || "");
     }
     setStep(2);
   }
 
-  // ── 步驟 3：確認送出成功 ───────────────────────────────
+  // ── 步驟 3：確認送出成功 ─────────────────────────────────
   function handleConfirmDone(res, payload) {
     setSubmitResult({ ...res, ...payload });
     setStep(4);
@@ -157,8 +158,6 @@ export default function App() {
             <button onClick={reset} className="text-xs text-slate-400 underline">重新開始</button>
           )}
         </div>
-
-        {/* 進度條 */}
         {step < 4 && (
           <div className="max-w-lg mx-auto px-4 pb-2">
             <div className="flex gap-1">
@@ -172,7 +171,6 @@ export default function App() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-5 pb-24">
-        {/* 步驟 0：填寫基本資料（帶入 basicData 記憶） */}
         {step === 0 && (
           <StepStart
             initialData={basicData}
@@ -182,34 +180,31 @@ export default function App() {
           />
         )}
 
-        {/* 步驟 1：選擇交通方式 */}
         {step === 1 && (
-          <StepTransportMode
-            onSelect={handleModeSelect}
-            onBack={() => setStep(0)}
-          />
+          <StepTransportMode onSelect={handleModeSelect} onBack={() => setStep(0)} />
         )}
 
-        {/* 步驟 2：路程詳細（大眾交通） */}
         {step === 2 && mode === "transit" && (
           <StepTransit
             initialLegs={initialLegs}
+            initialCompanions={initialCompanions}
+            userName={basicData?.name}
             onDone={handleTransportDone}
             onBack={handleTransportBack}
           />
         )}
 
-        {/* 步驟 2：路程詳細（自行開車） */}
         {step === 2 && mode === "drive" && (
           <StepDrive
             initialLegs={initialLegs}
             initialEtag={initialEtag}
+            initialCompanions={initialCompanions}
+            userName={basicData?.name}
             onDone={handleTransportDone}
             onBack={handleTransportBack}
           />
         )}
 
-        {/* 步驟 3：確認送出 */}
         {step === 3 && (
           <StepConfirm
             basicData={basicData}
@@ -219,7 +214,6 @@ export default function App() {
           />
         )}
 
-        {/* 完成畫面 */}
         {step === 4 && (
           <SuccessScreen result={submitResult} onReset={reset} />
         )}

@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import PlacesInput from "./PlacesInput";
+import NameChips from "./NameChips";
 import { useMapsLoader } from "../hooks/useMapsLoader";
 import { useDrivePresets } from "../hooks/useRoutePresets";
 
 let _nextId = 1;
-const ETAG_PER_KM = 1.3;   // 小客車每公里 ETag 費率（NT$）
+const ETAG_PER_KM = 1.3;
 
 const newLeg = () => ({
   id: _nextId++,
   description: "",
   origin: "",
   destination: "",
-  parking: "",       // 停車費 (NTD)
-  useHighway: false, // 是否途經高速公路（用於自動估算 ETag）
+  parking: "",
+  useHighway: false,
+  hasCompanion: false,   // 此路段是否與同行人共乘
   loading: false,
-  result: null,      // { distance_km, cost, origin_resolved, destination_resolved, duration_text, cost_per_km }
+  result: null,
   error: "",
 });
 
@@ -40,7 +42,7 @@ function PresetBar({ presets, onSelect, onRemove }) {
   );
 }
 
-function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate, onMove, onSave }) {
+function LegCard({ leg, index, total, mapsReady, hasAnyCompanion, onUpdate, onRemove, onCalculate, onMove, onSave }) {
   const canCalc = leg.origin.trim() && leg.destination.trim() && !leg.loading;
   const canSave = leg.origin.trim() && leg.destination.trim();
   const parkingAmt = Number(leg.parking) || 0;
@@ -51,9 +53,9 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
         <h3 className="font-semibold text-slate-700">路段 {index + 1}</h3>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => onMove(-1)} disabled={index === 0}
-            className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:border-brand hover:text-brand disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-500 transition text-sm">↑</button>
+            className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:border-brand hover:text-brand disabled:opacity-30 transition text-sm">↑</button>
           <button type="button" onClick={() => onMove(1)} disabled={index === total - 1}
-            className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:border-brand hover:text-brand disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-500 transition text-sm">↓</button>
+            className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:border-brand hover:text-brand disabled:opacity-30 transition text-sm">↓</button>
           {total > 1 && (
             <button type="button" onClick={onRemove}
               className="ml-1 text-sm text-slate-400 hover:text-red-500 transition">✕ 移除</button>
@@ -65,7 +67,7 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
         <label className="label">路程說明</label>
         <input className="field" value={leg.description}
           onChange={e => onUpdate("description", e.target.value)}
-          placeholder="例：公司到拍攝地1" />
+          placeholder="例：公司到拍攝地" />
       </div>
 
       <div>
@@ -98,7 +100,7 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
           <div className="bg-slate-50 rounded-xl p-3 text-sm space-y-1.5">
             <div className="flex justify-between">
               <span className="text-slate-500">距離</span>
-              <span className="font-semibold">{leg.result.distance_km} 公里</span>
+              <span className="font-semibold">{leg.result.distance_km} KM</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">預估車程</span>
@@ -115,14 +117,10 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
               </div>
             )}
           </div>
-          {/* 高速公路勾選 → 自動估算 ETag */}
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded accent-brand"
+            <input type="checkbox" className="w-4 h-4 rounded accent-brand"
               checked={!!leg.useHighway}
-              onChange={e => onUpdate("useHighway", e.target.checked)}
-            />
+              onChange={e => onUpdate("useHighway", e.target.checked)} />
             <span className="text-sm text-slate-600">🛣️ 途經高速公路</span>
             {leg.useHighway && (
               <span className="ml-auto text-xs text-slate-400">
@@ -141,6 +139,16 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
           placeholder="例：50" min="0" />
       </div>
 
+      {/* 是否與同行人共乘（有選同行人才顯示） */}
+      {hasAnyCompanion && (
+        <label className="flex items-center gap-2.5 cursor-pointer select-none bg-blue-50 rounded-xl px-3 py-2.5">
+          <input type="checkbox" className="w-4 h-4 rounded accent-brand"
+            checked={!!leg.hasCompanion}
+            onChange={e => onUpdate("hasCompanion", e.target.checked)} />
+          <span className="text-sm text-slate-700">🧑‍🤝‍🧑 此路段與同行人共乘</span>
+        </label>
+      )}
+
       {canSave && (
         <button type="button" onClick={onSave}
           className="text-xs text-slate-400 hover:text-amber-600 transition flex items-center gap-1">
@@ -151,8 +159,9 @@ function LegCard({ leg, index, total, mapsReady, onUpdate, onRemove, onCalculate
   );
 }
 
-export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) {
+export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, initialCompanions, userName }) {
   const mapsReady = useMapsLoader();
+  const [companions, setCompanions] = useState(initialCompanions || "");
   const [legs, setLegs] = useState(() => {
     if (initialLegs?.length > 0) {
       return initialLegs.map(l => ({
@@ -162,6 +171,7 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
         destination: l.destination || "",
         parking: String(l.parking || ""),
         useHighway: !!l.useHighway,
+        hasCompanion: !!l.hasCompanion,
         loading: false,
         result: l.result ?? (l.distance_km != null ? {
           distance_km: l.distance_km,
@@ -181,37 +191,20 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
   const [mapError, setMapError]     = useState("");
   const { presets, addPreset, removePreset } = useDrivePresets();
 
+  const companionExcludes = userName ? [userName] : [];
+  const hasAnyCompanion = companions.trim().length > 0;
+
   function updateLeg(id, key, val) {
     setLegs(prev => prev.map(l => l.id === id
       ? { ...l, [key]: val, ...(["origin", "destination"].includes(key) ? { result: null, error: "" } : {}) }
       : l
     ));
   }
-  function removeLeg(id) {
-    setLegs(prev => prev.filter(l => l.id !== id));
-  }
+  function removeLeg(id) { setLegs(prev => prev.filter(l => l.id !== id)); }
   function addLeg() {
-    if (legs.length >= 5) return;
+    if (legs.length >= 10) return;
     setLegs(prev => [...prev, newLeg()]);
   }
-  function applyPreset(p) {
-    setLegs(prev => {
-      const firstEmpty = prev.length === 1 && !prev[0].origin && !prev[0].destination;
-      const leg = { id: _nextId++, description: p.description || "", origin: p.origin, destination: p.destination, parking: "", loading: false, result: null, error: "" };
-      if (firstEmpty) {
-        return [{ ...prev[0], description: p.description || "", origin: p.origin, destination: p.destination, result: null, error: "" }];
-      }
-      return [...prev, leg];
-    });
-  }
-  function saveLegAsPreset(leg) {
-    addPreset({
-      description: leg.description.trim(),
-      origin: leg.origin.trim(),
-      destination: leg.destination.trim(),
-    });
-  }
-
   function moveLeg(id, delta) {
     setLegs(prev => {
       const idx = prev.findIndex(l => l.id === id);
@@ -221,6 +214,18 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
       [copy[idx], copy[target]] = [copy[target], copy[idx]];
       return copy;
     });
+  }
+  function applyPreset(p) {
+    setLegs(prev => {
+      const firstEmpty = prev.length === 1 && !prev[0].origin && !prev[0].destination;
+      if (firstEmpty) {
+        return [{ ...prev[0], description: p.description || "", origin: p.origin, destination: p.destination, result: null, error: "" }];
+      }
+      return [...prev, { id: _nextId++, description: p.description || "", origin: p.origin, destination: p.destination, parking: "", loading: false, result: null, error: "" }];
+    });
+  }
+  function saveLegAsPreset(leg) {
+    addPreset({ description: leg.description.trim(), origin: leg.origin.trim(), destination: leg.destination.trim() });
   }
 
   async function calculateLeg(id) {
@@ -239,10 +244,8 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
   const totalKm      = legs.reduce((s, l) => s + (l.result?.distance_km || 0), 0);
   const totalMileage = legs.reduce((s, l) => s + (l.result?.cost || 0), 0);
   const totalParking = legs.reduce((s, l) => s + (Number(l.parking) || 0), 0);
-  // autoEtag: 勾選高速公路的路段各自估算後加總
   const autoEtag = legs.reduce((s, l) =>
     l.useHighway && l.result ? s + Math.round(l.result.distance_km * ETAG_PER_KM) : s, 0);
-  // 若使用者有手動填寫則優先用手動值，否則用自動估算
   const etagAmt  = etag !== "" ? Number(etag) : autoEtag;
   const totalAmt = totalMileage + totalParking + etagAmt;
 
@@ -250,16 +253,10 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
     setMapError(""); setMapLoading(true);
     try {
       const pts = [];
-      legs.forEach((l, i) => {
-        if (i === 0) pts.push(l.origin);
-        pts.push(l.destination);
-      });
+      legs.forEach((l, i) => { if (i === 0) pts.push(l.origin); pts.push(l.destination); });
       await api.downloadRouteImage(pts);
-    } catch (e) {
-      setMapError(e.message);
-    } finally {
-      setMapLoading(false);
-    }
+    } catch (e) { setMapError(e.message); }
+    finally { setMapLoading(false); }
   }
 
   function confirm() {
@@ -271,10 +268,11 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
       cost:         l.result.cost,
       parking:      Number(l.parking) || 0,
       useHighway:   !!l.useHighway,
+      hasCompanion: !!l.hasCompanion,
     }));
-
     onDone({
       transport_mode: "drive",
+      companions,
       legs: legPayloads,
       etag_amt:      etagAmt,
       transport_amt: totalAmt,
@@ -285,8 +283,18 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={() => onBack?.(legs, etag)} className="text-slate-400 hover:text-slate-600">← 返回</button>
+        <button onClick={() => onBack?.(legs, etag, companions)} className="text-slate-400 hover:text-slate-600">← 返回</button>
         <h2 className="text-xl font-bold text-slate-800">自行開車路段</h2>
+      </div>
+
+      {/* 同行人 */}
+      <div className="card space-y-2">
+        <h3 className="font-semibold text-slate-700">👥 同行人 <span className="text-xs font-normal text-slate-400">（選填）</span></h3>
+        <NameChips selected={companions} onSelect={setCompanions}
+          multi excludes={companionExcludes} />
+        {hasAnyCompanion && (
+          <p className="text-xs text-slate-400">勾選各路段「與同行人共乘」可自動在表單標記</p>
+        )}
       </div>
 
       {mapsReady && (
@@ -298,24 +306,19 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
       <PresetBar presets={presets} onSelect={applyPreset} onRemove={removePreset} />
 
       {legs.map((leg, idx) => (
-        <LegCard
-          key={leg.id}
-          leg={leg}
-          index={idx}
-          total={legs.length}
-          mapsReady={mapsReady}
+        <LegCard key={leg.id} leg={leg} index={idx} total={legs.length}
+          mapsReady={mapsReady} hasAnyCompanion={hasAnyCompanion}
           onUpdate={(key, val) => updateLeg(leg.id, key, val)}
           onRemove={() => removeLeg(leg.id)}
           onCalculate={() => calculateLeg(leg.id)}
           onMove={(delta) => moveLeg(leg.id, delta)}
-          onSave={() => saveLegAsPreset(leg)}
-        />
+          onSave={() => saveLegAsPreset(leg)} />
       ))}
 
-      {legs.length < 5 && (
+      {legs.length < 10 && (
         <button type="button" onClick={addLeg}
           className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 hover:border-brand hover:text-brand transition text-sm font-medium">
-          + 新增路段
+          + 新增路段（最多 10 段）
         </button>
       )}
 
@@ -348,7 +351,8 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
               <div key={l.id} className="text-sm mb-1 space-y-0.5">
                 <div className="flex justify-between">
                   <span className="text-slate-300">
-                    路段 {i + 1}：{l.description || `${l.origin}→${l.destination}`}（{l.result.distance_km}km）
+                    路段 {i + 1}：{l.description || `${l.origin}→${l.destination}`}（{l.result.distance_km} KM）
+                    {l.hasCompanion && companions && <span className="ml-1 text-blue-300 text-xs">共乘</span>}
                   </span>
                   <span>NT$ {l.result.cost.toLocaleString()}</span>
                 </div>
@@ -362,13 +366,12 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag }) 
             ))}
             <div className="border-t border-slate-700 pt-2 mt-1 space-y-0.5">
               <div className="flex justify-between text-sm text-slate-400">
-                <span>里程費（{totalKm.toFixed(1)} km × 8）</span>
+                <span>里程費（{totalKm.toFixed(1)} KM × 8）</span>
                 <span>NT$ {totalMileage.toLocaleString()}</span>
               </div>
               {totalParking > 0 && (
                 <div className="flex justify-between text-sm text-slate-400">
-                  <span>停車費合計</span>
-                  <span>NT$ {totalParking.toLocaleString()}</span>
+                  <span>停車費合計</span><span>NT$ {totalParking.toLocaleString()}</span>
                 </div>
               )}
               {etagAmt > 0 && (

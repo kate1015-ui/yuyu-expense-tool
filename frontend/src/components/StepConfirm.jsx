@@ -19,11 +19,15 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
   const people     = Number(basicData?.people || 1);
   const mealTotal  = MEAL_PER_PERSON * people;
 
-  const companionList = (basicData?.companions || "")
+  // 同行人從 transportData 讀取
+  const companionList = (transportData?.companions || "")
     .split(/[,、]/).map(s => s.trim()).filter(Boolean);
 
+  // 顯示用路段（排除複製代墊段）
+  const displayLegs = legs.filter(l => !l.isCompanionCopy);
+  const copyCount   = legs.filter(l => l.isCompanionCopy).length;
+
   function buildPayload() {
-    // 確保 date_from / date_to 一定有值（單日出差就等於 date）
     const date = basicData?.date || new Date().toISOString().slice(0, 10);
     return {
       ...basicData,
@@ -61,13 +65,14 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
 
   function saveTemplate() {
     if (!templateName.trim()) return;
+    // 儲存時只存原始路段（不含複製代墊段）
     addTemplate({
       name:           templateName.trim(),
       reason:         basicData?.reason  || "",
       title:          basicData?.title   || "",
-      companions:     basicData?.companions || "",
+      companions:     transportData?.companions || "",
       transport_mode: transportData?.transport_mode,
-      legs,
+      legs:           displayLegs,
       etag_amt:       etagAmt,
     });
     setTemplateName(""); setSaving(false); setSaved(true);
@@ -81,7 +86,7 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
         <h2 className="text-xl font-bold text-slate-800">確認報帳資料</h2>
       </div>
 
-      {/* 出差資訊摘要 */}
+      {/* 出差資訊 */}
       <div className="card space-y-2">
         <div className="flex justify-between items-center">
           <h3 className="font-semibold text-slate-700">👤 出差人</h3>
@@ -92,28 +97,32 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
           <div className="flex gap-3"><span className="text-slate-400 w-12">職稱</span><span>{basicData?.title}</span></div>
           <div className="flex gap-3"><span className="text-slate-400 w-12">事由</span><span>{basicData?.reason}</span></div>
           <div className="flex gap-3"><span className="text-slate-400 w-12">日期</span><span>{basicData?.date}</span></div>
+          <div className="flex gap-3"><span className="text-slate-400 w-12">人數</span><span>{people} 人（膳雜費）</span></div>
           {companionList.length > 0 && (
             <div className="flex gap-3"><span className="text-slate-400 w-12">同行人</span><span>{companionList.join("、")}</span></div>
           )}
         </div>
       </div>
 
-      {/* 交通費摘要 */}
+      {/* 交通費 */}
       <div className="card space-y-2">
         <h3 className="font-semibold text-slate-700">🚘 交通費</h3>
         <div className="bg-slate-50 rounded-xl p-3 text-sm space-y-1.5">
           <div className="flex justify-between">
             <span className="text-slate-500">交通方式</span>
-            <span>{isDrive ? "自行開車" : "大眾交通"}・{legs.length} 段</span>
+            <span>{isDrive ? "自行開車" : "大眾交通"}・{displayLegs.length} 段{copyCount > 0 ? `＋${copyCount} 段代墊` : ""}</span>
           </div>
-          {legs.map((leg, i) => (
+          {displayLegs.map((leg, i) => (
             <div key={i} className="flex justify-between items-start gap-3">
               <span className="text-slate-500 flex-shrink-0">路段 {i + 1}</span>
               <span className="text-right text-xs leading-5 flex-1">
                 {isDrive ? (
                   <>
                     {leg.description || `${leg.origin}→${leg.destination}`}
-                    {leg.distance_km != null && <>（{leg.distance_km}km）</>}
+                    {leg.distance_km != null && <> ({leg.distance_km} KM)</>}
+                    {leg.hasCompanion && companionList.length > 0 && (
+                      <span className="ml-1 text-blue-600">・與{companionList.join("、")}共乘</span>
+                    )}
                     <br />
                     <span className="text-slate-500">里程費・NT$ {Number(leg.cost || 0).toLocaleString()}</span>
                     {Number(leg.parking) > 0 && (
@@ -123,6 +132,11 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
                 ) : (
                   <>
                     {leg.origin}→{leg.destination}
+                    {leg.hasCompanion && companionList.length > 0 && (
+                      <span className="ml-1 text-blue-600">
+                        {leg.tool === "計程車" ? `・與${companionList.join("、")}共乘` : "・含同行人"}
+                      </span>
+                    )}
                     <br />
                     <span className="text-slate-500">{leg.tool}・NT$ {Number(leg.amount || 0).toLocaleString()}</span>
                   </>
@@ -159,7 +173,7 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
         </div>
       </div>
 
-      {/* 儲存為常用報帳單 */}
+      {/* 儲存常用報帳單 */}
       <div className="card">
         {saved ? (
           <p className="text-sm text-green-600 text-center py-1">✅ 已儲存為常用報帳單</p>
