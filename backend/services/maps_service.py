@@ -1,15 +1,15 @@
 """Google Maps Directions API — 里程計算。
 
-刻意改用 Directions API（不用 Distance Matrix），因為這正是 Google Maps 網站
-顯示路線時用的同一支 API，距離結果會跟使用者點按鈕跳轉到 Maps 看到的數字一致，
-方便會計對帳。
+關鍵：傳 departure_time=now → API 的 routes[0] 才會跟 Maps 網站顯示的
+「目前最佳路線」一致（不傳的話 API 會選不同路徑）。
 
-刻意「不」傳 departure_time → API 用「平常路況」算最佳路線，同一段路永遠回相同距離，
-避免因為提交當下的塞車狀況影響數字（事後對帳時車流早就變了）。
+代價：提交時間不同，路況不同，數字會浮動 1-2 KM。
+但因為 Sheet 已經把當下值固定下來，之後查 Maps 看到的數字「應該」最接近這個。
 """
 from __future__ import annotations
 
 import re
+from datetime import datetime
 
 import googlemaps
 
@@ -73,12 +73,13 @@ def calculate_distance(origin: str, destination: str) -> dict:
         language="zh-TW",
         region="tw",
         units="metric",
+        departure_time=datetime.now(),  # 必要，否則 routes[0] 不會匹配 Maps 顯示的「最佳路線」
     )
 
     if not routes:
         raise RuntimeError("找不到可行駛路徑，請確認地址或重新搜尋")
 
-    # routes[0] 是 Google 推薦的主要路線（不抓即時車流，所以結果穩定）
+    # routes[0] = Google Maps 顯示的「目前最佳路線」
     leg = routes[0]["legs"][0]
     distance_km = _parse_km_from_display(
         leg["distance"].get("text", ""),
