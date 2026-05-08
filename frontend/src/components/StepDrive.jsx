@@ -220,8 +220,14 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
       const src = prev[idx];
       const ret = {
         id: _nextId++,
-        description: src.description
-          || (src.destination && src.origin ? `${src.destination}到${src.origin}` : ""),
+        description: (() => {
+          // 路程說明含「到」→ 把它反過來（住家到金湯匙 → 金湯匙到住家）
+          const m = (src.description || "").match(/^(.+?)到(.+)$/);
+          if (m) return `${m[2]}到${m[1]}`;
+          // 沒填說明就用地址補（用 destination 到 origin 是因為這是「回程」）
+          if (src.origin && src.destination) return `${src.destination}到${src.origin}`;
+          return "";
+        })(),
         origin: src.destination,
         destination: src.origin,
         parking: "",
