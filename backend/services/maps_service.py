@@ -78,7 +78,8 @@ def calculate_distance(origin: str, destination: str) -> dict:
     if not routes:
         raise RuntimeError("找不到可行駛路徑，請確認地址或重新搜尋")
 
-    leg = routes[0]["legs"][0]   # 推薦路線的唯一一段（無 waypoints）
+    # routes[0] 是 Google 推薦的主要路線（不抓即時車流，所以結果穩定）
+    leg = routes[0]["legs"][0]
     distance_km = _parse_km_from_display(
         leg["distance"].get("text", ""),
         leg["distance"]["value"],
