@@ -3,6 +3,7 @@
 每一個 row 對應出差旅費報告表上的一列：
   date            日期
   route           起訖地點（自行開車會帶「\n(XX KM)」）
+  route_url       Google Maps 路線連結（只有自行開車才有，會包成 HYPERLINK 公式）
   transport       交通工具（自行開車 / 高鐵 / 台鐵 / 捷運 / 計程車 / 停車費 / ETag）
   transport_amt   交通費金額
   meal_amt        膳雜費（只有第一列填，其餘 0）
@@ -10,7 +11,19 @@
 """
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 MEAL_PER_PERSON = 700   # 每人膳雜費 (NTD)
+
+
+def _build_maps_url(origin: str, destination: str) -> str:
+    """產生 Google Maps Directions URL（手機點開會跳 Maps APP）。"""
+    return "https://www.google.com/maps/dir/?" + urlencode({
+        "api": "1",
+        "origin": origin,
+        "destination": destination,
+        "travelmode": "driving",
+    })
 
 
 def build_rows_from_form(form: dict) -> list[dict]:
@@ -54,15 +67,20 @@ def build_rows_from_form(form: dict) -> list[dict]:
             parking_total += float(leg.get("parking") or 0)
             desc = leg.get("description", "").strip()
             distance = leg.get("distance_km")
-            route_label = desc if desc else f"{leg.get('origin','')}→{leg.get('destination','')}"
+            origin = (leg.get("origin") or "").strip()
+            destination = (leg.get("destination") or "").strip()
+            route_label = desc if desc else f"{origin}→{destination}"
             if distance is not None:
                 route_label = f"{route_label}\n({distance} KM)"
             # 此路段有勾選共乘才顯示「與X共乘」
             has_companion = leg.get("hasCompanion", False) and bool(companion_names)
             note = ("與" + companion_str + "共乘") if has_companion else ""
+            # 只要 origin / destination 都有就附上 Google Maps 路線連結
+            route_url = _build_maps_url(origin, destination) if (origin and destination) else None
             rows.append({
                 "date": d,
                 "route": route_label,
+                "route_url": route_url,
                 "transport": "自行開車",
                 "transport_amt": cost,
                 "meal_amt": meal_total if first else 0,

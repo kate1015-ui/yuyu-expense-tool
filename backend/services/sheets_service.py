@@ -268,9 +268,19 @@ def _fill(ws: gspread.Worksheet, payload: dict, date_str: str):
             # 停車費 / ETag 屬於開車衍生費用，工具欄一律標示為「自行開車」
             DRIVE_EXPENSES = {"停車費", "ETag/過路費"}
             display_transport = "自行開車" if transport in DRIVE_EXPENSES else transport
+
+            route_text = (rd.get("route") or "").replace("\n", " ")
+            route_url  = rd.get("route_url")
+            if route_url:
+                # 包成 HYPERLINK 公式：顯示文字仍是路段名稱，點下去跳 Google Maps
+                escaped = route_text.replace('"', '""')
+                route_cell = f'=HYPERLINK("{route_url}", "{escaped}")'
+            else:
+                route_cell = route_text
+
             updates += [
                 (f"A{r}", _tw_date(rd.get("date") or date_str)),
-                (f"C{r}", (rd.get("route") or "").replace("\n", " ")),
+                (f"C{r}", route_cell),
             ]
             if display_transport:
                 updates.append((f"D{r}", display_transport))
@@ -284,8 +294,8 @@ def _fill(ws: gspread.Worksheet, payload: dict, date_str: str):
     people = int(payload.get("people", 1))
     updates.append((f"I{people_row}", people))
 
-    # 一次批次寫入
-    ws.batch_update([
-        {"range": cell, "values": [[value]]}
-        for cell, value in updates
-    ])
+    # 一次批次寫入（USER_ENTERED 讓 HYPERLINK 公式能被解析）
+    ws.batch_update(
+        [{"range": cell, "values": [[value]]} for cell, value in updates],
+        value_input_option="USER_ENTERED",
+    )
