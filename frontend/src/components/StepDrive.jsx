@@ -220,7 +220,7 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
       const src = prev[idx];
       const ret = {
         id: _nextId++,
-        description: src.description ? `${src.description}（回程）` : "",
+        description: src.description || "",
         origin: src.destination,
         destination: src.origin,
         parking: "",
