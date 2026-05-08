@@ -3,11 +3,13 @@
 刻意改用 Directions API（不用 Distance Matrix），因為這正是 Google Maps 網站
 顯示路線時用的同一支 API，距離結果會跟使用者點按鈕跳轉到 Maps 看到的數字一致，
 方便會計對帳。
+
+刻意「不」傳 departure_time → API 用「平常路況」算最佳路線，同一段路永遠回相同距離，
+避免因為提交當下的塞車狀況影響數字（事後對帳時車流早就變了）。
 """
 from __future__ import annotations
 
 import re
-from datetime import datetime
 
 import googlemaps
 
@@ -43,9 +45,9 @@ def _parse_km_from_display(text: str, fallback_m: int):
 def calculate_distance(origin: str, destination: str) -> dict:
     """回傳距離 (公里) + 油資 (NTD)。
 
-    使用 Directions API + departure_time=now，這跟 Google Maps 網站當下顯示
-    的「最佳路線」邏輯一致（包含即時路況）。距離數字解析自 distance.text，
-    所以跟使用者在 Maps 看到的顯示完全一致（≥100km 取整數，否則 1 位小數）。
+    使用 Directions API（不抓即時車流），這樣同一段路永遠回相同數字，
+    不會因為提交時間不同而有 1-3 KM 跳動。距離數字解析自 distance.text，
+    顯示規則跟 Maps 一致（≥100km 取整數，否則 1 位小數）。
 
     Args:
       origin: 起點地址或地標 (中文可)
@@ -71,7 +73,6 @@ def calculate_distance(origin: str, destination: str) -> dict:
         language="zh-TW",
         region="tw",
         units="metric",
-        departure_time=datetime.now(),  # 啟用即時車流，跟 Maps 網站行為一致
     )
 
     if not routes:
