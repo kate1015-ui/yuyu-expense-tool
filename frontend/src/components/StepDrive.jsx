@@ -42,7 +42,7 @@ function PresetBar({ presets, onSelect, onRemove }) {
   );
 }
 
-function LegCard({ leg, index, total, mapsReady, hasAnyCompanion, onUpdate, onRemove, onCalculate, onMove, onSave }) {
+function LegCard({ leg, index, total, mapsReady, hasAnyCompanion, onUpdate, onRemove, onCalculate, onMove, onSave, onAddReturn }) {
   const canCalc = leg.origin.trim() && leg.destination.trim() && !leg.loading;
   const canSave = leg.origin.trim() && leg.destination.trim();
   const parkingAmt = Number(leg.parking) || 0;
@@ -149,12 +149,20 @@ function LegCard({ leg, index, total, mapsReady, hasAnyCompanion, onUpdate, onRe
         </label>
       )}
 
-      {canSave && (
-        <button type="button" onClick={onSave}
-          className="text-xs text-slate-400 hover:text-amber-600 transition flex items-center gap-1">
-          ⭐ 儲存為常用路線
-        </button>
-      )}
+      <div className="flex flex-wrap gap-3">
+        {canSave && (
+          <button type="button" onClick={onAddReturn}
+            className="text-xs text-blue-600 hover:text-blue-800 transition flex items-center gap-1">
+            ↩ 加入回程（{leg.destination || "終"}→{leg.origin || "起"}）
+          </button>
+        )}
+        {canSave && (
+          <button type="button" onClick={onSave}
+            className="text-xs text-slate-400 hover:text-amber-600 transition flex items-center gap-1">
+            ⭐ 儲存為常用路線
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -202,6 +210,28 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
   function addLeg() {
     if (legs.length >= 10) return;
     setLegs(prev => [...prev, newLeg()]);
+  }
+  /** 在指定路段後面，新增一段「起終點對調」的回程。 */
+  function addReturnLeg(id) {
+    if (legs.length >= 10) return;
+    setLegs(prev => {
+      const idx = prev.findIndex(l => l.id === id);
+      if (idx < 0) return prev;
+      const src = prev[idx];
+      const ret = {
+        id: _nextId++,
+        description: src.description ? `${src.description}（回程）` : "",
+        origin: src.destination,
+        destination: src.origin,
+        parking: "",
+        useHighway: !!src.useHighway,
+        hasCompanion: !!src.hasCompanion,
+        loading: false,
+        result: null,
+        error: "",
+      };
+      return [...prev.slice(0, idx + 1), ret, ...prev.slice(idx + 1)];
+    });
   }
   function moveLeg(id, delta) {
     setLegs(prev => {
@@ -300,7 +330,8 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
           onRemove={() => removeLeg(leg.id)}
           onCalculate={() => calculateLeg(leg.id)}
           onMove={(delta) => moveLeg(leg.id, delta)}
-          onSave={() => saveLegAsPreset(leg)} />
+          onSave={() => saveLegAsPreset(leg)}
+          onAddReturn={() => addReturnLeg(leg.id)} />
       ))}
 
       {legs.length < 10 && (
