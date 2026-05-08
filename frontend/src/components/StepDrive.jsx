@@ -187,8 +187,6 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
     return [newLeg()];
   });
   const [etag, setEtag] = useState(String(initialEtag || ""));
-  const [mapLoading, setMapLoading] = useState(false);
-  const [mapError, setMapError]     = useState("");
   const { presets, addPreset, removePreset } = useDrivePresets();
 
   const companionExcludes = userName ? [userName] : [];
@@ -248,16 +246,6 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
     l.useHighway && l.result ? s + Math.round(l.result.distance_km * ETAG_PER_KM) : s, 0);
   const etagAmt  = etag !== "" ? Number(etag) : autoEtag;
   const totalAmt = totalMileage + totalParking + etagAmt;
-
-  async function downloadRouteImage() {
-    setMapError(""); setMapLoading(true);
-    try {
-      const pts = [];
-      legs.forEach((l, i) => { if (i === 0) pts.push(l.origin); pts.push(l.destination); });
-      await api.downloadRouteImage(pts);
-    } catch (e) { setMapError(e.message); }
-    finally { setMapLoading(false); }
-  }
 
   function confirm() {
     const legPayloads = legs.map(l => ({
@@ -387,10 +375,6 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
             </div>
           </div>
 
-          <button type="button" className="btn-ghost w-full py-3" onClick={downloadRouteImage} disabled={mapLoading}>
-            {mapLoading ? "產生路線圖…" : "🗺️ 下載路線圖"}
-          </button>
-          {mapError && <p className="text-xs text-red-500">{mapError}</p>}
         </>
       )}
 

@@ -21,7 +21,8 @@ export default function StepTransportMode({ onSelect, onBack }) {
           <div className="text-lg font-bold text-slate-800">大眾交通工具</div>
           <div className="text-sm text-slate-500 mt-0.5">
             捷運、公車、高鐵、台鐵、計程車…<br />
-            拍下票根，AI 自動辨識金額
+            高鐵：輸入起訖站自動帶入金額<br />
+            台鐵：手動輸入站名與金額
           </div>
         </div>
       </button>

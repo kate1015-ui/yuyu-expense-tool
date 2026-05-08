@@ -45,3 +45,4 @@ Thumbs.db
 .playwright-mcp/
 tmp/
 temp/
+.vercel

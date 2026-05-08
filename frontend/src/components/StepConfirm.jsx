@@ -52,17 +52,6 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
     }
   }
 
-  async function download() {
-    setError(""); setLoading(true);
-    try {
-      await api.downloadExpense(buildPayload());
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function saveTemplate() {
     if (!templateName.trim()) return;
     // 儲存時只存原始路段（不含複製代墊段）
@@ -204,12 +193,8 @@ export default function StepConfirm({ basicData, transportData, onBack, onDone }
         {loading ? "送出中…" : "✅ 送出報帳"}
       </button>
 
-      <button className="btn-ghost w-full py-3 text-sm" onClick={download} disabled={loading}>
-        📥 只下載 Excel（不送出）
-      </button>
-
       <p className="text-center text-xs text-slate-400">
-        送出後資料會存入你的 Google Sheet，再提供 Excel 供印出交會計
+        送出後資料會存入你的 Google Sheet，可開啟列印交會計
       </p>
     </div>
   );

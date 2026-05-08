@@ -4,26 +4,32 @@ import StepTransportMode from "./components/StepTransportMode";
 import StepTransit       from "./components/StepTransit";
 import StepDrive         from "./components/StepDrive";
 import StepConfirm       from "./components/StepConfirm";
-import { api }           from "./api/client";
+
+// 外部憑證/明細查詢頁
+const HSR_ETICKET_URL = "https://ptis.thsrc.com.tw/ptis/#";
+const ETAG_URL        = "https://www.fetc.net.tw/";
+
+function buildMapsUrl(origin, destination) {
+  const params = new URLSearchParams({
+    api: "1",
+    origin,
+    destination,
+    travelmode: "driving",
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
 
 function SuccessScreen({ result, onReset }) {
-  const [dlLoading, setDlLoading] = useState(false);
-  const [dlError, setDlError]     = useState("");
+  // 判斷需要顯示哪些憑證下載連結
+  const needHsrEticket = !!result?.has_hsr_electronic
+    || (Array.isArray(result?.legs) && result.legs.some(l => l?.tool === "高鐵" && l?.hsrTicketType === "electronic"));
+  const needEtag = Number(result?.etag_amt || 0) > 0;
 
-  async function downloadExcel() {
-    setDlError(""); setDlLoading(true);
-    try {
-      await api.downloadExpense({
-        ...result,
-        transport_amt: Number(result?.transport_amt || 0),
-        people:        Number(result?.people        || 1),
-      });
-    } catch (e) {
-      setDlError(e.message);
-    } finally {
-      setDlLoading(false);
-    }
-  }
+  // 自行開車模式：每段路線都需要 Google Maps 截圖佐證
+  const driveLegs = (result?.transport_mode === "drive" && Array.isArray(result?.legs))
+    ? result.legs.filter(l => l?.origin && l?.destination)
+    : [];
+  const needDriveMaps = driveLegs.length > 0;
 
   return (
     <div className="card text-center py-10 space-y-5">
@@ -42,6 +48,41 @@ function SuccessScreen({ result, onReset }) {
           合計 <span className="text-brand font-bold text-base">NT$ {Number(result?.grand_total || 0).toLocaleString()}</span>
         </div>
       </div>
+
+      {/* 憑證提醒區塊（自行開車路線 / 高鐵電子票 / eTAG）*/}
+      {(needDriveMaps || needHsrEticket || needEtag) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left text-sm space-y-3">
+          <p className="font-medium text-amber-800">📎 別忘了補上憑證</p>
+
+          {needDriveMaps && driveLegs.map((leg, i) => (
+            <a key={`map-${i}`}
+              href={buildMapsUrl(leg.origin, leg.destination)}
+              target="_blank" rel="noreferrer"
+              className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2.5 text-amber-800 hover:bg-amber-100 transition">
+              <span className="truncate pr-2">
+                🗺️ 路段 {i + 1} 路線：{leg.description || `${leg.origin}→${leg.destination}`}
+              </span>
+              <span className="text-xs flex-shrink-0">↗</span>
+            </a>
+          ))}
+
+          {needHsrEticket && (
+            <a href={HSR_ETICKET_URL} target="_blank" rel="noreferrer"
+              className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2.5 text-amber-800 hover:bg-amber-100 transition">
+              <span>🚄 下載高鐵電子車票明細</span>
+              <span className="text-xs">↗</span>
+            </a>
+          )}
+          {needEtag && (
+            <a href={ETAG_URL} target="_blank" rel="noreferrer"
+              className="flex items-center justify-between bg-white border border-amber-200 rounded-lg px-3 py-2.5 text-amber-800 hover:bg-amber-100 transition">
+              <span>🛣️ 查詢 eTag 過路費明細</span>
+              <span className="text-xs">↗</span>
+            </a>
+          )}
+        </div>
+      )}
+
       <div className="space-y-3 pt-2">
         {result?.sheet_url && (
           <a href={result.sheet_url} target="_blank" rel="noreferrer"
@@ -50,10 +91,6 @@ function SuccessScreen({ result, onReset }) {
             開啟 Google Sheet 列印
           </a>
         )}
-        <button className="btn-ghost w-full max-w-xs mx-auto block" onClick={downloadExcel} disabled={dlLoading}>
-          {dlLoading ? "產生中…" : "📥 下載 Excel（備用）"}
-        </button>
-        {dlError && <p className="text-xs text-red-500">{dlError}</p>}
         <button className="btn-ghost w-full max-w-xs mx-auto block" onClick={onReset}>
           繼續新增報帳
         </button>

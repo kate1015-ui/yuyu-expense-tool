@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTransitPresets } from "../hooks/useRoutePresets";
 import { lookupFare } from "../utils/fareData";
 import NameChips from "./NameChips";
@@ -20,6 +20,7 @@ const newLeg = () => ({
   destination: "",
   amount: "",
   hasCompanion: false,
+  hsrTicketType: "",   // "electronic" | "physical"（僅 tool=高鐵 時使用）
 });
 
 function PresetBar({ presets, onSelect, onRemove }) {
@@ -44,32 +45,8 @@ function PresetBar({ presets, onSelect, onRemove }) {
   );
 }
 
-const OCR_TOOLS = new Set(["高鐵", "台鐵"]);
-
 function LegCard({ leg, index, total, hasAnyCompanion, onUpdate, onRemove, onMove, onSave }) {
-  const cameraRef = useRef(null);
-  const fileRef   = useRef(null);
-  const [ocrStatus, setOcrStatus] = useState("");
   const canSave = leg.tool && leg.origin.trim() && leg.destination.trim();
-  const showCamera = OCR_TOOLS.has(leg.tool);
-
-  async function handlePhoto(file) {
-    if (!file) return;
-    setOcrStatus("辨識中…");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/mileage/recognize-ticket", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!json.ok) { setOcrStatus(`⚠️ ${json.error || "無法辨識，請手動輸入"}`); return; }
-      onUpdate("origin", json.origin);
-      onUpdate("destination", json.destination);
-      if (json.amount) onUpdate("amount", String(json.amount));
-      setOcrStatus(`✅ ${json.origin} → ${json.destination}${json.amount ? `・NT$${json.amount}` : ""}`);
-    } catch (e) {
-      setOcrStatus(`⚠️ 辨識失敗：${e.message}`);
-    }
-  }
 
   return (
     <div className="card space-y-3">
@@ -103,30 +80,6 @@ function LegCard({ leg, index, total, hasAnyCompanion, onUpdate, onRemove, onMov
         </div>
       </div>
 
-      {showCamera && (
-        <>
-          <input ref={cameraRef} type="file" accept="image/*" capture="environment"
-            className="hidden" onChange={e => handlePhoto(e.target.files?.[0])} />
-          <input ref={fileRef} type="file" accept="image/*,application/pdf"
-            className="hidden" onChange={e => handlePhoto(e.target.files?.[0])} />
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => cameraRef.current?.click()}
-              className="py-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 text-blue-600 text-sm hover:bg-blue-100 transition flex items-center justify-center gap-1">
-              📷 拍攝車票
-            </button>
-            <button type="button" onClick={() => fileRef.current?.click()}
-              className="py-2 rounded-xl border border-dashed border-blue-300 bg-blue-50 text-blue-600 text-sm hover:bg-blue-100 transition flex items-center justify-center gap-1">
-              🖼️ 上傳截圖
-            </button>
-          </div>
-          {ocrStatus && (
-            <div className={`text-xs px-3 py-2 rounded-lg ${ocrStatus.startsWith("⚠️") ? "bg-red-50 text-red-600" : "bg-slate-50 text-slate-600"}`}>
-              {ocrStatus}
-            </div>
-          )}
-        </>
-      )}
-
       <div>
         <label className="label">出發地</label>
         <input className="field" value={leg.origin}
@@ -145,6 +98,33 @@ function LegCard({ leg, index, total, hasAnyCompanion, onUpdate, onRemove, onMov
           onChange={e => onUpdate("amount", e.target.value)}
           placeholder="例：150" />
       </div>
+
+      {/* 高鐵票券類型（僅高鐵顯示） */}
+      {leg.tool === "高鐵" && (
+        <div>
+          <label className="label">高鐵票券類型</label>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { key: "electronic", label: "📱 電子票" },
+              { key: "physical",   label: "🎫 實體票" },
+            ].map(t => (
+              <button key={t.key} type="button"
+                onClick={() => onUpdate("hsrTicketType", t.key)}
+                className={`py-2.5 rounded-xl border text-sm font-medium transition
+                  ${leg.hsrTicketType === t.key
+                    ? "bg-brand text-white border-brand"
+                    : "bg-white text-slate-600 border-slate-200 hover:border-brand"}`}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {leg.hsrTicketType === "electronic" && (
+            <p className="text-xs text-blue-600 mt-1.5">
+              💡 送出後會提供「下載電子車票明細」按鈕
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 此路段有同行人（有選同行人才顯示） */}
       {hasAnyCompanion && (
@@ -184,6 +164,7 @@ export default function StepTransit({ onDone, onBack, initialLegs, initialCompan
           destination: l.destination || "",
           amount: String(l.amount || ""),
           hasCompanion: !!l.hasCompanion,
+          hsrTicketType: l.hsrTicketType || "",
         }));
     }
     return [newLeg()];
@@ -240,7 +221,12 @@ export default function StepTransit({ onDone, onBack, initialLegs, initialCompan
   const total = legs.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
   const allValid = legs.length > 0 && legs.every(l =>
     l.origin.trim() && l.destination.trim() && l.tool && Number(l.amount) > 0
+    // 高鐵需選票券類型
+    && (l.tool !== "高鐵" || l.hsrTicketType)
   );
+
+  // 是否有任何電子高鐵票（送出後 SuccessScreen 會提示下載明細）
+  const hasHsrElectronic = legs.some(l => l.tool === "高鐵" && l.hsrTicketType === "electronic");
 
   function confirm() {
     if (!allValid) return;
@@ -253,6 +239,7 @@ export default function StepTransit({ onDone, onBack, initialLegs, initialCompan
         tool: leg.tool,
         amount: Number(leg.amount),
         hasCompanion: leg.hasCompanion || false,
+        hsrTicketType: leg.hsrTicketType || "",
         isCompanionCopy: false,
       };
       expandedLegs.push(base);
@@ -271,6 +258,7 @@ export default function StepTransit({ onDone, onBack, initialLegs, initialCompan
       date: new Date().toISOString().slice(0, 10),
       legs: expandedLegs,
       transport_amt: expandedTotal,
+      has_hsr_electronic: hasHsrElectronic,
     });
   }
 

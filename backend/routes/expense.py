@@ -1,13 +1,7 @@
-"""報帳提交 + Excel 下載。
+"""POST /api/expense/submit — 寫入個人 Google Sheet，回傳確認。"""
+from flask import Blueprint, jsonify, request
 
-POST /api/expense/submit    寫入個人 Google Sheet，回傳確認
-POST /api/expense/download  回傳填好的 .xlsx 供列印
-"""
-from flask import Blueprint, jsonify, request, send_file
-from io import BytesIO
-
-from config import config
-from services.excel_service import generate_expense_excel, build_rows_from_form, MEAL_PER_PERSON
+from services.expense_rows import build_rows_from_form, MEAL_PER_PERSON
 from services.sheets_service import append_expense
 
 expense_bp = Blueprint("expense", __name__)
@@ -76,42 +70,4 @@ def submit():
         grand_total=payload["grand_total"],
         meal_total=payload["meal_total"],
         transport_total=payload["transport_total"],
-    )
-
-
-@expense_bp.post("/download")
-def download():
-    """產生填好的 Excel 供列印，不需要 Google Sheet 設定也能用。"""
-    data = request.get_json(silent=True) or {}
-    err = _validate(data)
-    if err:
-        return jsonify(error=err), 400
-
-    payload = _build_payload(data)
-
-    excel_payload = {
-        "name":      payload["name"],
-        "title":     payload.get("title", ""),
-        "unit":      "嶼嶼行銷",
-        "reason":    payload["reason"],
-        "date_from": payload["date_from"],
-        "date_to":   payload["date_to"],
-        "people":    payload["people"],
-        "rows":      payload["rows"],
-    }
-
-    try:
-        xlsx_bytes = generate_expense_excel(excel_payload)
-    except Exception as e:
-        return jsonify(error="產生 Excel 失敗", detail=str(e)), 500
-
-    safe_name   = "".join(c for c in payload["name"]   if c.isalnum())[:6]
-    safe_reason = "".join(c for c in payload["reason"] if c.isalnum() or c in "_ -")[:12]
-    filename = f"出差旅費報告表_{safe_name}_{safe_reason}_{payload['date_from']}.xlsx"
-
-    return send_file(
-        BytesIO(xlsx_bytes),
-        download_name=filename,
-        as_attachment=True,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )

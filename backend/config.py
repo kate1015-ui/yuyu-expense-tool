@@ -48,10 +48,6 @@ class Config:
     )
     FRONTEND_ORIGIN = FRONTEND_ORIGINS[0] if FRONTEND_ORIGINS else "http://localhost:5173"
 
-    # Gemini
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-
     # Google Maps
     GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
     COST_PER_KM = float(os.getenv("COST_PER_KM", 8))
@@ -74,10 +70,8 @@ class Config:
     # 每個人的工作表 tab 名稱（全部共用同一個名稱）
     MEMBER_SHEET_TAB = os.getenv("MEMBER_SHEET_TAB", "報帳紀錄")
 
-    # 上傳限制
+    # Flask 請求大小上限（用於 413 錯誤）
     MAX_UPLOAD_MB = 10
-    ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "webp", "heic"}
-    ALLOWED_EXT = {"png", "jpg", "jpeg", "webp", "heic", "pdf"}
 
 
 config = Config()

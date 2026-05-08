@@ -37,7 +37,6 @@ def create_app() -> Flask:
         return jsonify(
             status="ok",
             service="ai-expense-tool",
-            gemini_configured=bool(config.GEMINI_API_KEY),
             maps_configured=bool(config.GOOGLE_MAPS_API_KEY),
             sheets_configured=bool(config.MEMBER_SHEETS),
         )
