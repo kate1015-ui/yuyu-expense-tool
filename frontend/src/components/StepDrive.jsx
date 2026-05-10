@@ -6,7 +6,18 @@ import { useMapsLoader } from "../hooks/useMapsLoader";
 import { useDrivePresets } from "../hooks/useRoutePresets";
 
 let _nextId = 1;
-const ETAG_PER_KM = 1.3;
+
+// ETag 估算公式（依 2026 年遠通電收官方）
+const ETAG_RATE_PER_KM = 1.2;          // 小型車每公里
+const ETAG_DAILY_FREE_KM = 20;         // 每日前 20 公里免費
+const ETAG_PREPAID_DISCOUNT = 0.9;     // 預儲帳戶足額扣款 9 折
+
+function estimateEtag(totalHighwayKm) {
+  if (!totalHighwayKm || totalHighwayKm <= 0) return 0;
+  const gross = totalHighwayKm * ETAG_RATE_PER_KM;
+  const afterFreeKm = Math.max(0, gross - ETAG_DAILY_FREE_KM * ETAG_RATE_PER_KM);
+  return Math.round(afterFreeKm * ETAG_PREPAID_DISCOUNT);
+}
 
 const newLeg = () => ({
   id: _nextId++,
@@ -14,7 +25,6 @@ const newLeg = () => ({
   origin: "",
   destination: "",
   parking: "",
-  useHighway: false,
   hasCompanion: false,   // 此路段是否與同行人共乘
   loading: false,
   result: null,
@@ -117,17 +127,12 @@ function LegCard({ leg, index, total, mapsReady, hasAnyCompanion, onUpdate, onRe
               </div>
             )}
           </div>
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input type="checkbox" className="w-4 h-4 rounded accent-brand"
-              checked={!!leg.useHighway}
-              onChange={e => onUpdate("useHighway", e.target.checked)} />
-            <span className="text-sm text-slate-600">🛣️ 途經高速公路</span>
-            {leg.useHighway && (
-              <span className="ml-auto text-xs text-slate-400">
-                ETag 估算 NT$ {Math.round(leg.result.distance_km * ETAG_PER_KM)}
-              </span>
-            )}
-          </label>
+          {leg.result.highway_km > 0 && (
+            <div className="flex items-center text-sm text-slate-600 bg-blue-50 rounded-lg px-3 py-2">
+              <span>🛣️ 自動偵測高速公路段</span>
+              <span className="ml-auto font-medium">{leg.result.highway_km} KM</span>
+            </div>
+          )}
         </>
       )}
 
@@ -178,7 +183,6 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
         origin: l.origin || "",
         destination: l.destination || "",
         parking: String(l.parking || ""),
-        useHighway: !!l.useHighway,
         hasCompanion: !!l.hasCompanion,
         loading: false,
         result: l.result ?? (l.distance_km != null ? {
@@ -276,13 +280,13 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
   }
 
   const allCalculated = legs.length > 0 && legs.every(l => l.result);
-  const totalKm      = legs.reduce((s, l) => s + (l.result?.distance_km || 0), 0);
-  const totalMileage = legs.reduce((s, l) => s + (l.result?.cost || 0), 0);
-  const totalParking = legs.reduce((s, l) => s + (Number(l.parking) || 0), 0);
-  const autoEtag = legs.reduce((s, l) =>
-    l.useHighway && l.result ? s + Math.round(l.result.distance_km * ETAG_PER_KM) : s, 0);
-  const etagAmt  = etag !== "" ? Number(etag) : autoEtag;
-  const totalAmt = totalMileage + totalParking + etagAmt;
+  const totalKm        = legs.reduce((s, l) => s + (l.result?.distance_km || 0), 0);
+  const totalMileage   = legs.reduce((s, l) => s + (l.result?.cost || 0), 0);
+  const totalParking   = legs.reduce((s, l) => s + (Number(l.parking) || 0), 0);
+  const totalHighwayKm = legs.reduce((s, l) => s + (l.result?.highway_km || 0), 0);
+  const autoEtag       = estimateEtag(totalHighwayKm);
+  const etagAmt        = etag !== "" ? Number(etag) : autoEtag;
+  const totalAmt       = totalMileage + totalParking + etagAmt;
 
   function confirm() {
     const legPayloads = legs.map(l => ({
@@ -292,7 +296,6 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
       distance_km:  l.result.distance_km,
       cost:         l.result.cost,
       parking:      Number(l.parking) || 0,
-      useHighway:   !!l.useHighway,
       hasCompanion: !!l.hasCompanion,
     }));
     onDone({
@@ -358,7 +361,7 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
         </div>
         <input type="number" className="field" value={etag}
           onChange={e => setEtag(e.target.value)}
-          placeholder={autoEtag > 0 ? `自動估算：${autoEtag}（可覆蓋）` : "未勾選高速公路則手動填寫"}
+          placeholder={autoEtag > 0 ? `自動估算：${autoEtag}（可覆蓋）` : "若有經過高速公路請手動填寫"}
           min="0" />
         {etag !== "" && (
           <button type="button" onClick={() => setEtag("")}
@@ -366,7 +369,10 @@ export default function StepDrive({ onDone, onBack, initialLegs, initialEtag, in
             ↩ 清除改用自動估算（NT$ {autoEtag}）
           </button>
         )}
-        <p className="text-xs text-slate-400">勾選各路段「途經高速公路」可自動計算（{ETAG_PER_KM} 元/公里）</p>
+        <p className="text-xs text-slate-400">
+          公式：高速段 × 1.2 − 24（每日前 20km 免費）× 0.9（預儲扣款優惠）
+          {totalHighwayKm > 0 && <>　偵測高速段共 <b>{totalHighwayKm} KM</b></>}
+        </p>
       </div>
 
       {allCalculated && (

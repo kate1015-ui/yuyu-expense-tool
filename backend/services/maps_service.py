@@ -22,6 +22,18 @@ def _client() -> googlemaps.Client:
     return googlemaps.Client(key=config.GOOGLE_MAPS_API_KEY)
 
 
+def _sum_highway_km(steps: list) -> float:
+    """從路線 steps 抓「國道 / 高速 / 快速公路」段，加總 km，
+    用來算 ETag（只有高速段才會被收費）。"""
+    HIGHWAY_KEYWORDS = ("國道", "高速", "快速公路", "快速道路")
+    total_m = 0
+    for step in steps or []:
+        instr = step.get("html_instructions", "") or ""
+        if any(kw in instr for kw in HIGHWAY_KEYWORDS):
+            total_m += step.get("distance", {}).get("value", 0)
+    return round(total_m / 1000, 1)
+
+
 def _parse_km_from_display(text: str, fallback_m: int):
     """從 Google 回傳的 distance.text（如「164 公里」「61.4 公里」「950 公尺」）
     抽出公里數，與 Maps 網站顯示完全一致。
@@ -93,6 +105,7 @@ def calculate_distance(origin: str, destination: str) -> dict:
         "origin_resolved": leg["start_address"],
         "destination_resolved": leg["end_address"],
         "distance_km": distance_km,
+        "highway_km": _sum_highway_km(leg.get("steps", [])),
         "duration_text": leg["duration"]["text"],
         "cost": cost,
         "cost_per_km": config.COST_PER_KM,
