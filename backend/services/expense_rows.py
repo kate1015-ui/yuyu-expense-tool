@@ -61,10 +61,9 @@ def build_rows_from_form(form: dict) -> list[dict]:
     first = True
 
     if mode == "drive":
-        parking_total = 0.0
         for leg in legs:
             cost = float(leg.get("cost") or 0)
-            parking_total += float(leg.get("parking") or 0)
+            parking = float(leg.get("parking") or 0)
             desc = leg.get("description", "").strip()
             distance = leg.get("distance_km")
             origin = (leg.get("origin") or "").strip()
@@ -87,11 +86,12 @@ def build_rows_from_form(form: dict) -> list[dict]:
                 "note": note,
             })
             first = False
-        if parking_total > 0:
-            rows.append({
-                "date": d, "route": "停車費", "transport": "停車費",
-                "transport_amt": parking_total, "meal_amt": 0, "note": "",
-            })
+            # 該路段若有停車費，緊接著加一列「停車費」
+            if parking > 0:
+                rows.append({
+                    "date": d, "route": "停車費", "transport": "停車費",
+                    "transport_amt": parking, "meal_amt": 0, "note": "",
+                })
         etag_total = float(form.get("etag_amt") or 0)
         if etag_total > 0:
             rows.append({
